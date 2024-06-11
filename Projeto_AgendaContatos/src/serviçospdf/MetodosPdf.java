@@ -15,6 +15,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
 import modelos.Contato;
+/**
+ *
+ * @author filip
+ */
 
 public class MetodosPdf {
 
@@ -40,7 +44,6 @@ public class MetodosPdf {
         PdfWriter.getInstance(documento, new FileOutputStream(filePath));
         documento.open();
         for (Contato contato : contatos) {
-            // Formatando os campos conforme necessário
             String telefoneStr = String.format("+%02d(%02d)%05d-%04d",
                                     contato.getTelefone().getDdi(), 
                                     contato.getTelefone().getDdd(), 
@@ -49,7 +52,6 @@ public class MetodosPdf {
 
             String cepStr = String.format("%05d-%03d", contato.getEndereco().getCep() / 1000, contato.getEndereco().getCep() % 1000);
 
-            // Escrevendo os detalhes do contato no documento
             documento.add(new Paragraph("Nome: " + contato.getNomeCompleto()));
             documento.add(new Paragraph("Telefone: " + telefoneStr));
             documento.add(new Paragraph("E-mail: " + contato.getEmail()));
@@ -59,9 +61,9 @@ public class MetodosPdf {
                                         ", " + cepStr +
                                         ", " + contato.getEndereco().getCidade() +
                                         ", " + contato.getEndereco().getEstado()));
-            documento.add(new Paragraph("\n")); // Adiciona uma linha em branco entre os contatos
+            documento.add(new Paragraph("\n")); 
         }
-        documento.close(); // Fechar o documento depois de escrever
+        documento.close();
         System.out.println("PDF criado com sucesso em: " + filePath);
     } catch (FileNotFoundException ex) {
         System.out.println("Arquivo não encontrado: " + ex.getMessage());

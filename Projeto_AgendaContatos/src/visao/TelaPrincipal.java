@@ -4,35 +4,36 @@
  */
 package visao;
 
-import java.util.ArrayList;
+import java.awt.Point;
+import java.awt.Rectangle;
 import javax.swing.JOptionPane;
-import javax.swing.RowFilter;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableRowSorter;
+import controle.Controle;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import modelos.Contato;
 import modelos.Endereco;
 import modelos.Telefone;
 import persistencia.ContatoDAO;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import controle.Controle;
-import java.awt.Point;
-import java.awt.Rectangle;
-import java.util.List;
+
 
 /**
  *
  * @author filip
  */
 public class TelaPrincipal extends javax.swing.JFrame {
-private Controle Controle;
+private Controle controle;
 private Contato contatoSelecionado;
+
     /**
      * Creates new form TelaPrincipal
+     * @throws java.lang.Exception     
      */
-    public TelaPrincipal() {
+    public TelaPrincipal() throws Exception {
         initComponents();
-        Controle = new Controle(new ContatoDAO());
+        controle = new Controle(new ContatoDAO());   
+        atualizarTabela();
     }
     
     @SuppressWarnings("unchecked")
@@ -255,11 +256,11 @@ private Contato contatoSelecionado;
 
             },
             new String [] {
-                "Nome", "Telefone", "Email", "Endereço"
+                "Id", "Nome", "Telefone", "Email", "Endereço"
             }
         ) {
             boolean[] canEdit = new boolean [] {
-                false, false, false, false
+                false, false, false, false, false
             };
 
             public boolean isCellEditable(int rowIndex, int columnIndex) {
@@ -278,6 +279,9 @@ private Contato contatoSelecionado;
             }
         });
         jScrollPane1.setViewportView(jTable_Tabela);
+        if (jTable_Tabela.getColumnModel().getColumnCount() > 0) {
+            jTable_Tabela.getColumnModel().getColumn(0).setPreferredWidth(5);
+        }
 
         jButton_Adicionar.setBackground(new java.awt.Color(0, 102, 51));
         jButton_Adicionar.setFont(new java.awt.Font("Segoe UI", 1, 13)); // NOI18N
@@ -383,7 +387,7 @@ private Contato contatoSelecionado;
                         .addGap(18, 18, 18)
                         .addComponent(jButton_PDF, javax.swing.GroupLayout.PREFERRED_SIZE, 99, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGap(66, 66, 66)
+                        .addGap(29, 29, 29)
                         .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 964, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
@@ -410,9 +414,9 @@ private Contato contatoSelecionado;
                     .addComponent(jButton_Excluir, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButton_Listar, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jButton_PDF, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(30, 30, 30)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 31, Short.MAX_VALUE)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 467, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(21, Short.MAX_VALUE))
+                .addGap(20, 20, 20))
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -431,32 +435,73 @@ private Contato contatoSelecionado;
         pack();
         setLocationRelativeTo(null);
     }// </editor-fold>//GEN-END:initComponents
-private void gerarPDF() throws Exception {
-    List<Contato> contato = Controle.listar();
-    Controle.gerarPdf(contato);
-    JOptionPane.showMessageDialog(this, "PDF criado com sucesso!");
+private void gerarPDF() {
+        try {
+            List<Contato> contatos = controle.listar();
+            controle.gerarPdf(contatos);
+            JOptionPane.showMessageDialog(this, "PDF criado com sucesso!");
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Erro ao gerar PDF: " + ex.getMessage(),
+                    "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void abrirPdf() {
+        try {
+            String filePath = "Tabela.PDF";
+            controle.abrirPdf(filePath);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Erro ao abrir PDF: " + ex.getMessage(),
+                    "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void atualizarTabela() {
+    try {
+        List<Contato> contatos = controle.listar();
+        DefaultTableModel model = (DefaultTableModel) jTable_Tabela.getModel();
+        model.setRowCount(0);
+
+        for (Contato contato : contatos) {
+            String telefoneStr = "+" + contato.getTelefone().getDdi() + "(" 
+                    + contato.getTelefone().getDdd() + ")" + contato.getTelefone().getNumero();
+            String cepStr = String.format("%05d-%03d", contato.getEndereco().getCep() / 1000,
+                    contato.getEndereco().getCep() % 1000);
+            String enderecoStr = contato.getEndereco().getLogradouro() 
+                    + ", " + contato.getEndereco().getNumero() + ", " + contato.getEndereco().getComplemento() 
+                    + ", " + cepStr + ", " + contato.getEndereco().getCidade() + ", " 
+                    + contato.getEndereco().getEstado();
+
+            Object[] dados = new Object[]{
+                contato.getId(),
+                contato.getNomeCompleto(),
+                telefoneStr,
+                contato.getEmail(),
+                enderecoStr
+            };
+            model.addRow(dados);
+        }
+    } catch (Exception ex) {
+        JOptionPane.showMessageDialog(this, "Erro ao atualizar tabela: " + ex.getMessage(),
+                "Erro", JOptionPane.ERROR_MESSAGE);
+    }
 }
 
-private void abrirPdf() {
-    String filePath = "Tabela.PDF";
-    Controle.abrirPdf(filePath);
-}
-private void atualizarTabela(ArrayList<Contato> contatos) {
+private void atualizarTabela(List<Contato> resultados) {
     DefaultTableModel model = (DefaultTableModel) jTable_Tabela.getModel();
-    model.setRowCount(0);
-    
-    for (Contato contato : contatos) {        
-        Telefone telefone = contato.getTelefone();
-        Endereco endereco = contato.getEndereco();
-               
-        String telefoneNumeroStr = String.format("%09d", telefone.getNumero());
-        String telefoneStr = "+" + telefone.getDdi() + "(" + telefone.getDdd() + ")" + telefoneNumeroStr.substring(0, 5) + "-" + telefoneNumeroStr.substring(5);
-        
-        
-        String cepStr = String.format("%05d-%03d", endereco.getCep() / 1000, endereco.getCep() % 1000);
-        String enderecoStr = endereco.getLogradouro() + ", " + endereco.getNumero() + ", " + endereco.getComplemento() + ", " + cepStr + ", " + endereco.getCidade() + ", " + endereco.getEstado();
+    model.setRowCount(0); // Limpa a tabela
 
-        Object[] dados = new Object[] {
+    for (Contato contato : resultados) {
+        String telefoneStr = "+" + contato.getTelefone().getDdi() + "(" + contato.getTelefone().getDdd() +
+                ")" + contato.getTelefone().getNumero();
+        String cepStr = String.format("%05d-%03d", contato.getEndereco().getCep() / 1000,
+                contato.getEndereco().getCep() % 1000);
+        String enderecoStr = contato.getEndereco().getLogradouro() + ", " +
+                contato.getEndereco().getNumero() + ", " + contato.getEndereco().getComplemento() + ", " + cepStr +
+                ", " + contato.getEndereco().getCidade() + ", " + contato.getEndereco().getEstado();
+
+        Object[] dados = new Object[]{
+            contato.getId(),
             contato.getNomeCompleto(),
             telefoneStr,
             contato.getEmail(),
@@ -465,91 +510,96 @@ private void atualizarTabela(ArrayList<Contato> contatos) {
         model.addRow(dados);
     }
 }
+
     private void jButton_ExcluirActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton_ExcluirActionPerformed
         try {
         int linhaSelecionada = jTable_Tabela.getSelectedRow();
 
         if (linhaSelecionada >= 0) {
-            String nome = jTable_Tabela.getValueAt(linhaSelecionada, 0).toString();
-            
-            Controle controle = new Controle(new ContatoDAO());
-            controle.excluir(nome);
+            int confirmacao = JOptionPane.showConfirmDialog(this,
+                    "Tem certeza de que deseja excluir este contato?",
+                    "Confirmação de Exclusão",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
 
-            jButton_ListarActionPerformed(evt);
-
-            jTextField_NomeCompleto.setText("");
-            jFormattedTextField_Telefone.setText("");
-            jTextField_Email.setText("");
-            jTextField_Logradouro.setText("");
-            jTextField_Numero.setText("");
-            jFormattedTextField_CEP.setText("");
-            jTextField_Complemento.setText("");
-            jTextField_Cidade.setText("");
-            jTextField_Estado.setText("");
+            if (confirmacao == JOptionPane.YES_OPTION) {
+                String nome = jTable_Tabela.getValueAt(linhaSelecionada, 1).toString();
+                controle.excluir(nome);
+                atualizarTabela();
+                limparCampos();
+            }
         } else {
-            JOptionPane.showMessageDialog(this, "Nenhum contato selecionado para exclusão.", "Erro", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Nenhum contato selecionado para exclusão.",
+                    "Erro", JOptionPane.ERROR_MESSAGE);
         }
     } catch (IllegalArgumentException e) {
         JOptionPane.showMessageDialog(this, e.getMessage(), "Erro de Validação", JOptionPane.ERROR_MESSAGE);
     } catch (Exception e) {
-        JOptionPane.showMessageDialog(this, "Erro ao excluir contato: " + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        JOptionPane.showMessageDialog(this, "Erro ao excluir contato: " + e.getMessage(),
+                "Erro", JOptionPane.ERROR_MESSAGE);
     }
     }//GEN-LAST:event_jButton_ExcluirActionPerformed
 
     private void jButton_PDFActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton_PDFActionPerformed
 
     try {
-        gerarPDF();
-    } catch (Exception ex) {
-        Logger.getLogger(TelaPrincipal.class.getName()).log(Level.SEVERE, null, ex);
-    }
-        abrirPdf();
+            gerarPDF();
+            abrirPdf();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Erro ao gerar PDF: " + ex.getMessage(),
+                    "Erro", JOptionPane.ERROR_MESSAGE);
+        }
     }//GEN-LAST:event_jButton_PDFActionPerformed
 
     private void jTable_TabelaMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jTable_TabelaMouseClicked
-    
-   jTextField_NomeCompleto.setEnabled(true);
-    jFormattedTextField_Telefone.setEnabled(true);
-    jTextField_Email.setEnabled(true);
-    jTextField_Logradouro.setEnabled(true);
-    jTextField_Numero.setEnabled(true);
-    jTextField_Complemento.setEnabled(true);
-    jFormattedTextField_CEP.setEnabled(true);
-    jTextField_Cidade.setEnabled(true);
-    jTextField_Estado.setEnabled(true);
-
-    int linhaSelecionada = jTable_Tabela.getSelectedRow();
+   int linhaSelecionada = jTable_Tabela.getSelectedRow();
     if (linhaSelecionada >= 0) {
-        String nome = jTable_Tabela.getValueAt(linhaSelecionada, 0).toString();
-        String telefone = jTable_Tabela.getValueAt(linhaSelecionada, 1).toString();
-        String email = jTable_Tabela.getValueAt(linhaSelecionada, 2).toString();
-        String endereco = jTable_Tabela.getValueAt(linhaSelecionada, 3).toString();
-
-        String ddi = telefone.substring(1, 3);
-        String ddd = telefone.substring(4, 6);
-        String numero = telefone.substring(7, 12) + telefone.substring(13);
-
-        String[] dadosEndereco = endereco.split(", ");
-        String logradouro = dadosEndereco[0];
-        String numeroStr = dadosEndereco[1];
-        String complemento = dadosEndereco[2];
-        String cep = dadosEndereco[3];
-        String cidade = dadosEndereco[4];
-        String estado = dadosEndereco[5];
-
-        jTextField_NomeCompleto.setText(nome);
-        jFormattedTextField_Telefone.setText("+" + ddi + "(" + ddd + ")" + numero);
-        jTextField_Email.setText(email);
-        jTextField_Logradouro.setText(logradouro);
-        jTextField_Numero.setText(numeroStr);
-        jTextField_Complemento.setText(complemento);
-        jFormattedTextField_CEP.setText(cep);
-        jTextField_Cidade.setText(cidade);
-        jTextField_Estado.setText(estado);
-
-        contatoSelecionado = new Contato(nome, new Telefone(Integer.parseInt(ddi), Integer.parseInt(ddd), Integer.parseInt(numero)), email, new Endereco(logradouro, Integer.parseInt(numeroStr), complemento, Integer.parseInt(cep.replace("-", "")), cidade, estado));
+        Contato contatoSelecionado = getContatoFromSelectedRow(linhaSelecionada);
+        if (contatoSelecionado != null) {
+            String nome = contatoSelecionado.getNomeCompleto();
+            String telefone = "+" + contatoSelecionado.getTelefone().getDdi() +
+                    "(" + contatoSelecionado.getTelefone().getDdd() + ")" +
+                    contatoSelecionado.getTelefone().getNumero();
+            String email = contatoSelecionado.getEmail();
+            String logradouro = contatoSelecionado.getEndereco().getLogradouro();
+            String numero = String.valueOf(contatoSelecionado.getEndereco().getNumero());
+            String complemento = contatoSelecionado.getEndereco().getComplemento();
+            String cep = String.format("%05d-%03d",
+                    contatoSelecionado.getEndereco().getCep() / 1000,
+                    contatoSelecionado.getEndereco().getCep() % 1000);
+            String cidade = contatoSelecionado.getEndereco().getCidade();
+            String estado = contatoSelecionado.getEndereco().getEstado();
+                        
+            jTextField_NomeCompleto.setText(nome);
+            jFormattedTextField_Telefone.setText(telefone);
+            jTextField_Email.setText(email);
+            jTextField_Logradouro.setText(logradouro);
+            jTextField_Numero.setText(numero);
+            jTextField_Complemento.setText(complemento);
+            jFormattedTextField_CEP.setText(cep);
+            jTextField_Cidade.setText(cidade);
+            jTextField_Estado.setText(estado);
+        } else {
+            JOptionPane.showMessageDialog(this, "Erro ao buscar contato.", "Erro", JOptionPane.ERROR_MESSAGE);
+        }
     }
     }//GEN-LAST:event_jTable_TabelaMouseClicked
+private Contato getContatoFromSelectedRow(int row) {
+    DefaultTableModel model = (DefaultTableModel) jTable_Tabela.getModel();
+    String nome = model.getValueAt(row, 1).toString();
+    try {
+        List<Contato> contatos = controle.consultar(nome); 
+        if (contatos != null && !contatos.isEmpty()) {
+            return contatos.get(0);
+        } else {
+            return null;
+        }
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "Erro ao buscar contato: " + e.getMessage(),
+                "Erro", JOptionPane.ERROR_MESSAGE);
+        return null;
+    }
+}
 
     private void jButton_AdicionarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton_AdicionarActionPerformed
        try {
@@ -566,18 +616,31 @@ private void atualizarTabela(ArrayList<Contato> contatos) {
         if (numeroStr.isEmpty() || cepStr.isEmpty() || telefone.isEmpty() || telefone.length() < 10) {
             throw new NumberFormatException("Preencha todos os campos corretamente.");
         }
-
-        Endereco end = new Endereco(logradouro, Integer.parseInt(numeroStr), complemento, Integer.parseInt(cepStr), cidade, estado);
+if (numeroStr.isEmpty()){
+    numeroStr = "S/N";
+}
+        Endereco end = new Endereco(logradouro, numeroStr,
+                complemento, Integer.parseInt(cepStr), cidade, estado);
         Telefone tel = new Telefone(
-                Integer.parseInt(telefone.substring(0, 2)), 
-                Integer.parseInt(telefone.substring(2, 4)), 
+                Integer.parseInt(telefone.substring(0, 2)),
+                Integer.parseInt(telefone.substring(2, 4)),
                 Integer.parseInt(telefone.substring(4))
         );
-        Contato contato = new Contato(nome, tel, email, end);
+        Contato contato = new Contato(0, nome, tel, email, end);
 
-        Controle controle = new Controle(new ContatoDAO());
         controle.incluir(contato);
-
+        atualizarTabela();
+        limparCampos();
+        JOptionPane.showMessageDialog(this, "Contato incluído com sucesso!", "Sucesso",
+                JOptionPane.INFORMATION_MESSAGE);
+    } catch (IllegalArgumentException e) {
+        JOptionPane.showMessageDialog(this, e.getMessage(), "Erro de Validação", JOptionPane.ERROR_MESSAGE);
+    } catch (Exception e) {
+        JOptionPane.showMessageDialog(this, "Erro ao processar a inclusão: " + e.getMessage(),
+                "Erro", JOptionPane.ERROR_MESSAGE);
+    }
+    }//GEN-LAST:event_jButton_AdicionarActionPerformed
+private void limparCampos() {
         jTextField_NomeCompleto.setText("");
         jFormattedTextField_Telefone.setText("");
         jTextField_Email.setText("");
@@ -587,117 +650,89 @@ private void atualizarTabela(ArrayList<Contato> contatos) {
         jTextField_Complemento.setText("");
         jTextField_Cidade.setText("");
         jTextField_Estado.setText("");
-
-        JOptionPane.showMessageDialog(this, "Contato incluído com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-
-    } catch (IllegalArgumentException e) {
-        JOptionPane.showMessageDialog(this, e.getMessage(), "Erro de Validação", JOptionPane.ERROR_MESSAGE);
-    } catch (Exception e) {
-        JOptionPane.showMessageDialog(this, "Erro ao processar a inclusão: " + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
     }
-    }//GEN-LAST:event_jButton_AdicionarActionPerformed
-
     private void jButton_ListarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton_ListarActionPerformed
-        jTable_Tabela.setRowSorter(null);
-    DefaultTableModel model = (DefaultTableModel) jTable_Tabela.getModel();
-
-    ContatoDAO contatoDAO = new ContatoDAO();
-    ArrayList<Contato> contatos;
-    try {
-        contatos = contatoDAO.listar(); 
-
-        model.setRowCount(0); 
-        for (Contato contato : contatos) {
-            Telefone telefone = contato.getTelefone();
-            Endereco endereco = contato.getEndereco();
-           
-            String telefoneNumeroStr = String.format("%09d", telefone.getNumero()); 
-            String telefoneStr = String.format("+%02d(%02d)%05d-%04d",
-                                    telefone.getDdi(), 
-                                    telefone.getDdd(), 
-                                    Integer.parseInt(telefoneNumeroStr.substring(0, 5)),
-                                    Integer.parseInt(telefoneNumeroStr.substring(5)));
-
-            String cepStr = String.format("%05d-%03d", endereco.getCep() / 1000, endereco.getCep() % 1000);
-            String enderecoStr = endereco.getLogradouro() + ", " + endereco.getNumero() + ", " + endereco.getComplemento() + ", " + cepStr + ", " + endereco.getCidade() + ", " + endereco.getEstado();
-        
-            Object[] dados = new Object[] {
-                contato.getNomeCompleto(),
-                telefoneStr,
-                contato.getEmail(),
-                enderecoStr
-            };
-            model.addRow(dados);
-        }
-    } catch (Exception erro) {
-        JOptionPane.showMessageDialog(this, "Erro ao listar contatos: " + erro.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-    }
-
+        atualizarTabela();
     }//GEN-LAST:event_jButton_ListarActionPerformed
 
     private void jButton_AlterarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton_AlterarActionPerformed
-    try {
-    String nome = jTextField_NomeCompleto.getText().trim();
-    String telefone = jFormattedTextField_Telefone.getText().trim().replaceAll("[^0-9]", "");
-    String email = jTextField_Email.getText().trim();
-    String logradouro = jTextField_Logradouro.getText().trim();
-    String numeroStr = jTextField_Numero.getText().trim().replaceAll("[^0-9]", "");
-    String complemento = jTextField_Complemento.getText().trim();
-    String cepStr = jFormattedTextField_CEP.getText().trim().replaceAll("[^0-9]", "");
-    String cidade = jTextField_Cidade.getText().trim();
-    String estado = jTextField_Estado.getText().trim();
+    int linhaSelecionada = jTable_Tabela.getSelectedRow();
+    if (linhaSelecionada >= 0) {
+        Contato contatoSelecionado = getContatoFromSelectedRow(linhaSelecionada);
 
-    if (numeroStr.isEmpty() || cepStr.isEmpty() || telefone.isEmpty() || telefone.length() < 10) {
-        throw new NumberFormatException("Selecione um contato para alterar");
+        String novoNome = jTextField_NomeCompleto.getText().trim();
+        String novoTelefone = jFormattedTextField_Telefone.getText().trim().replaceAll("[^0-9]", "");
+        String novoEmail = jTextField_Email.getText().trim();
+        String novoLogradouro = jTextField_Logradouro.getText().trim();
+        String novoNumeroStr = jTextField_Numero.getText().trim().replaceAll("[^0-9]", "");
+        String novoComplemento = jTextField_Complemento.getText().trim();
+        String novoCepStr = jFormattedTextField_CEP.getText().trim().replaceAll("[^0-9]", "");
+        String novaCidade = jTextField_Cidade.getText().trim();
+        String novoEstado = jTextField_Estado.getText().trim();
+
+        if (novoNome.isEmpty() || novoTelefone.isEmpty() || novoTelefone.length() < 10) {
+            JOptionPane.showMessageDialog(this, "Preencha todos os campos corretamente.",
+                    "Erro de Validação", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+if (novoNumeroStr.isEmpty()){
+    novoNumeroStr = "S/N";
+}
+        Endereco novoEndereco = new Endereco(novoLogradouro, novoNumeroStr,
+                novoComplemento, Integer.parseInt(novoCepStr), novaCidade, novoEstado);
+        Telefone novoTelefoneObj = new Telefone(Integer.parseInt(novoTelefone.substring(0, 2)),
+                Integer.parseInt(novoTelefone.substring(2, 4)), Integer.parseInt(novoTelefone.substring(4)));
+        Contato novoContato = new Contato(contatoSelecionado.getId(), novoNome, novoTelefoneObj,
+                novoEmail, novoEndereco); 
+
+        try {
+            Controle controle = new Controle(new ContatoDAO());
+
+            if (!novoNome.equals(contatoSelecionado.getNomeCompleto())) {
+                List<Contato> contatoExistente = controle.consultar(novoNome);
+                if (!contatoExistente.isEmpty()) {
+                    JOptionPane.showMessageDialog(this, "Já existe um contato com este nome.",
+                            "Erro de Validação", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+            }
+
+            controle.alterar(contatoSelecionado, novoContato);
+
+            jButton_ListarActionPerformed(evt);
+
+            limparCampos();
+
+            JOptionPane.showMessageDialog(this, "Contato alterado com sucesso!", "Sucesso",
+                    JOptionPane.INFORMATION_MESSAGE);
+
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage(), "Erro de Validação", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Erro ao processar a alteração: " + e.getMessage(),
+                    "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    } else {
+        JOptionPane.showMessageDialog(this, "Selecione um contato para editar.", "Erro", JOptionPane.ERROR_MESSAGE);
     }
 
-    Endereco end = new Endereco(logradouro, Integer.parseInt(numeroStr), complemento, Integer.parseInt(cepStr), cidade, estado);
 
-    int ddi = Integer.parseInt(telefone.substring(0, 2));
-    int ddd = Integer.parseInt(telefone.substring(2, 4));
-    int numero = Integer.parseInt(telefone.substring(4));
-
-    Telefone tel = new Telefone(ddi, ddd, numero);
-    Contato contato = new Contato(nome, tel, email, end);
-
-    Controle controle = new Controle(new ContatoDAO());
-    controle.alterar(contatoSelecionado, contato);
-
-    jTextField_NomeCompleto.setText("");
-    jFormattedTextField_Telefone.setText("");
-    jTextField_Email.setText("");
-    jTextField_Logradouro.setText("");
-    jTextField_Numero.setText("");
-    jFormattedTextField_CEP.setText("");
-    jTextField_Complemento.setText("");
-    jTextField_Cidade.setText("");
-    jTextField_Estado.setText("");
-
-    JOptionPane.showMessageDialog(this, "Contato alterado com sucesso!", "Sucesso", JOptionPane.INFORMATION_MESSAGE);
-    jButton_ListarActionPerformed(evt);
-    
-} catch (IllegalArgumentException e) {
-    JOptionPane.showMessageDialog(this, e.getMessage(), "Erro de Validação", JOptionPane.ERROR_MESSAGE);
-} catch (Exception e) {
-    JOptionPane.showMessageDialog(this, "Erro ao processar a alteração: " + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-}
     }//GEN-LAST:event_jButton_AlterarActionPerformed
 
     private void jTextField_NomeCompletoKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_jTextField_NomeCompletoKeyReleased
-          int posicao = jTextField_NomeCompleto.getCaretPosition();
-        jTextField_NomeCompleto.setText(jTextField_NomeCompleto.getText().toUpperCase());
-        jTextField_NomeCompleto.setCaretPosition(posicao);
-        
-        DefaultTableModel model = (DefaultTableModel) jTable_Tabela.getModel();
-        TableRowSorter<DefaultTableModel> linha = new TableRowSorter<>(model);
-        jTable_Tabela.setRowSorter(linha);
-        linha.setRowFilter(RowFilter.regexFilter(jTextField_NomeCompleto.getText()));
-        String termo = jTextField_NomeCompleto.getText().trim();
+            String textoDigitado = jTextField_NomeCompleto.getText();
+    String textoMaiusculo = textoDigitado.toUpperCase();
+    jTextField_NomeCompleto.setText(textoMaiusculo);
+
+    String termo = textoMaiusculo.trim();
     try {
-        ArrayList<Contato> resultados = Controle.consultar(termo);
-        atualizarTabela(resultados);
+        List<Contato> resultados = controle.consultar(termo);
+        if (resultados != null) {
+            atualizarTabela(resultados);
+        }
     } catch (Exception e) {
-        JOptionPane.showMessageDialog(this, "Erro ao consultar: " + e.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
+        JOptionPane.showMessageDialog(this, "Erro ao consultar: " + e.getMessage(),
+                "Erro", JOptionPane.ERROR_MESSAGE);
     }
     }//GEN-LAST:event_jTextField_NomeCompletoKeyReleased
 
@@ -758,7 +793,11 @@ private void atualizarTabela(ArrayList<Contato> contatos) {
         /* Create and display the form */
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new TelaPrincipal().setVisible(true);
+                try {
+                    new TelaPrincipal().setVisible(true);
+                } catch (Exception ex) {
+                    Logger.getLogger(TelaPrincipal.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
         });
     }

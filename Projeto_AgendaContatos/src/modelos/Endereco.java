@@ -1,15 +1,18 @@
 package modelos;
-
+/**
+ *
+ * @author filip
+ */
 public class Endereco {
 
     private String logradouro;
-    private int numero;
+    private String numero;
     private String complemento;
     private int cep;
     private String cidade;
     private String estado;
 
-    public Endereco(String logradouro, int numero, String complemento, int cep, String cidade, String estado) {
+    public Endereco(String logradouro, String numero, String complemento, int cep, String cidade, String estado) {
         this.logradouro = logradouro;
         this.numero = numero;
         this.complemento = complemento;
@@ -26,10 +29,10 @@ public class Endereco {
     public void setLogradouro(String logradouro) {
         this.logradouro = logradouro;
     }
-    public int getNumero() {
+    public String getNumero() {
         return numero;
     }
-    public void setNumero(int numero) {
+    public void setNumero(String numero) {
         this.numero = numero;
     }
     public String getComplemento() {

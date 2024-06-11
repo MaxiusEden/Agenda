@@ -4,193 +4,151 @@
  */
 package persistencia;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+
 import modelos.Contato;
+import modelos.Telefone;
 import modelos.Endereco;
 import modelos.Icrud;
-import modelos.Telefone;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import util.ConexaoBD;
 
-/**
- *
- * @author dobne
- */
 public class ContatoDAO implements Icrud {
-    private static String nomeArquivo = "./dados/AgendaDeContatos.csv";
-    
-@Override
-public void incluir(Contato objeto) throws Exception{
+    private Connection conexao = null;
+
+    public ContatoDAO() throws Exception {
+        conexao = ConexaoBD.getConexao();
+    }
+
+    @Override
+    public void incluir(Contato objeto) throws Exception {
     try {
-        FileWriter fw = new FileWriter(nomeArquivo, true);
-        BufferedWriter bw = new BufferedWriter(fw);
+        String sql = "INSERT INTO contatos(nomeCompleto, ddi, ddd, numero, email, logradouro, numeroEndereco,"
+                + " complemento, cep, cidade, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        PreparedStatement preparedStatement = conexao.prepareStatement(sql);
+        preparedStatement.setString(1, objeto.getNomeCompleto());
+        preparedStatement.setInt(2, objeto.getTelefone().getDdi());
+        preparedStatement.setInt(3, objeto.getTelefone().getDdd());
+        preparedStatement.setInt(4, objeto.getTelefone().getNumero());
+        preparedStatement.setString(5, objeto.getEmail());
+        preparedStatement.setString(6, objeto.getEndereco().getLogradouro());
+        preparedStatement.setString(7, objeto.getEndereco().getNumero());
+        preparedStatement.setString(8, objeto.getEndereco().getComplemento());
+        preparedStatement.setInt(9, objeto.getEndereco().getCep());
+        preparedStatement.setString(10, objeto.getEndereco().getCidade());
+        preparedStatement.setString(11, objeto.getEndereco().getEstado());
+        preparedStatement.executeUpdate();
 
-        Telefone telefone = objeto.getTelefone();
-        Endereco endereco = objeto.getEndereco();
-        
-        String linha = String.join(";",
-                objeto.getNomeCompleto(),
-                Integer.toString(telefone.getDdi()),
-                Integer.toString(telefone.getDdd()),
-                Integer.toString(telefone.getNumero()),
-                objeto.getEmail(),
-                endereco.getLogradouro(),
-                Integer.toString(endereco.getNumero()),
-                endereco.getComplemento(),
-                Integer.toString(endereco.getCep()),
-                endereco.getCidade(),
-                endereco.getEstado());
-
-        bw.write(linha);
-        bw.newLine();
-        bw.close();
-    } catch (Exception erro) {
-        throw erro;
+    } catch (SQLException erro) {
+        throw new Exception("Erro ao inserir contato no banco de dados: " + erro.getMessage());
     }
 }
 
-    
-    
-@Override
-public ArrayList<Contato> listar() throws Exception{
-    ArrayList<Contato> lista = new ArrayList<>();
-
-    try (BufferedReader buffRead = new BufferedReader(new FileReader(nomeArquivo))) {
-        String linha;
-        while ((linha = buffRead.readLine()) != null) {
-            String[] partes = linha.split(";");
-
-                String nome = partes[0];
-                    
-                int ddi = Integer.parseInt(partes[1]);
-                int ddd = Integer.parseInt(partes[2]);
-                int numero = Integer.parseInt(partes[3]);
-                Telefone telefone = new Telefone(ddi, ddd, numero);
-
-                String email = partes[4];
-
-                String logradouro = partes[5];
-                int numeroEndereco = Integer.parseInt(partes[6]);
-                String complemento = partes[7];
-                int cep = Integer.parseInt(partes[8]);
-                String cidade = partes[9];
-                String estado = partes[10];
-                Endereco endereco = new Endereco(logradouro, numeroEndereco, complemento, cep, cidade, estado);
-
-                Contato contato = new Contato(nome, telefone, email, endereco);
-                lista.add(contato);
-                } 
-        }catch (Exception e) {
-            e.printStackTrace();
+    @Override
+    public void excluir(String nomeCompleto) throws Exception {
+        try {
+            String sql = "DELETE FROM contatos WHERE nomecompleto=?";
+            PreparedStatement preparedStatement = conexao.prepareStatement(sql);
+            preparedStatement.setString(1, nomeCompleto);
+            preparedStatement.executeUpdate();
+        } catch (SQLException erro) {
+            throw new Exception("SQL Erro: " + erro.getMessage());
         }
-    
-        // Ordenar a lista de contatos pelo nome completo
-        Collections.sort(lista, new Comparator<Contato>() {
-            @Override
-            public int compare(Contato contato1, Contato contato2) {
-                return contato1.getNomeCompleto().compareToIgnoreCase(contato2.getNomeCompleto());
-            }
-        });
-    
-    return lista;
+    }
+
+    @Override
+    public void alterar(Contato contatoAntigo, Contato contatoNovo) throws Exception {
+        try {
+            String sql = "UPDATE contatos SET nomeCompleto=?, ddi=?, ddd=?, numero=?, email=?, logradouro=?,"
+                    + " numeroEndereco=?, complemento=?, cep=?, cidade=?, estado=? WHERE nomecompleto=?";
+            PreparedStatement preparedStatement = conexao.prepareStatement(sql);
+            preparedStatement.setString(1, contatoNovo.getNomeCompleto());
+            preparedStatement.setInt(2, contatoNovo.getTelefone().getDdi());
+            preparedStatement.setInt(3, contatoNovo.getTelefone().getDdd());
+            preparedStatement.setInt(4, contatoNovo.getTelefone().getNumero());
+            preparedStatement.setString(5, contatoNovo.getEmail());
+            preparedStatement.setString(6, contatoNovo.getEndereco().getLogradouro());
+            preparedStatement.setString(7, contatoNovo.getEndereco().getNumero());
+            preparedStatement.setString(8, contatoNovo.getEndereco().getComplemento());
+            preparedStatement.setInt(9, contatoNovo.getEndereco().getCep());
+            preparedStatement.setString(10, contatoNovo.getEndereco().getCidade());
+            preparedStatement.setString(11, contatoNovo.getEndereco().getEstado());
+            preparedStatement.setString(12, contatoAntigo.getNomeCompleto());
+            preparedStatement.executeUpdate();
+
+        } catch (SQLException erro) {
+            throw new Exception("SQL Erro: " + erro.getMessage());
+        }
+    }
+
+    @Override
+public List<Contato> consultar(String nome) throws Exception {
+    List<Contato> contatos = new ArrayList<>();
+    try {
+        String sql = "SELECT * FROM contatos WHERE nomecompleto LIKE ?";
+        PreparedStatement preparedStatement = conexao.prepareStatement(sql);
+        preparedStatement.setString(1, "%" + nome + "%");
+        ResultSet rs = preparedStatement.executeQuery();
+
+        while (rs.next()) {
+            int id = rs.getInt("id");
+            String nomeCompleto = rs.getString("nomecompleto");
+            int ddi = rs.getInt("ddi");
+            int ddd = rs.getInt("ddd");
+            int numero = rs.getInt("numero");
+            String email = rs.getString("email");
+            String logradouro = rs.getString("logradouro");
+            String numeroEndereco = rs.getString("numeroEndereco");
+            String complemento = rs.getString("complemento");
+            int cep = rs.getInt("cep");
+            String cidade = rs.getString("cidade");
+            String estado = rs.getString("estado");
+            Telefone telefone = new Telefone(ddi, ddd, numero);
+            Endereco endereco = new Endereco(logradouro, numeroEndereco, complemento, cep, cidade, estado);
+            Contato contato = new Contato(id, nomeCompleto, telefone, email, endereco); 
+            contatos.add(contato);
+        }
+    } catch (SQLException erro) {
+        throw new Exception("SQL Erro: " + erro.getMessage());
+    }
+    return contatos;
 }
-
-
 
 
     @Override
-    public void excluir(String nomeCompleto) {
-        ArrayList<String> auxiliar = new ArrayList<>(); //criação de lista auxiliar
-        boolean contatoEncontrado = false;
+public List<Contato> listar() throws Exception {
+    List<Contato> contatos = new ArrayList<>();
+    try {
+        String sql = "SELECT * FROM contatos";
+        PreparedStatement preparedStatement = conexao.prepareStatement(sql);
+        ResultSet rs = preparedStatement.executeQuery();
 
-        try (BufferedReader buffRead = new BufferedReader(new FileReader(nomeArquivo))){
-            String linha;
-            while((linha = buffRead.readLine()) != null){
-                String[] contato = linha.split(";");
-                if(!contato[0].equalsIgnoreCase(nomeCompleto)){ //se a lista não contém o nome, adiciona à lista auxiliar
-                    auxiliar.add(linha);
-                } else {
-                    contatoEncontrado = true; //se a lista contém o nome, ele é marcado como encontrado
-                                              //mas não é adicionado à lista 
-                }
-            }
-        }catch(IOException e){
-            e.printStackTrace();
+        while (rs.next()) {
+            int id = rs.getInt("id");
+                String nome = rs.getString("nomeCompleto");
+                int ddi = rs.getInt("ddi");
+                int ddd = rs.getInt("ddd");
+                int numero = rs.getInt("numero");
+                String email = rs.getString("email");
+                String logradouro = rs.getString("logradouro");
+                String numeroEndereco = rs.getString("numeroEndereco");
+                String complemento = rs.getString("complemento");
+                int cep = rs.getInt("cep");
+                String cidade = rs.getString("cidade");
+                String estado = rs.getString("estado");
+                Telefone telefone = new Telefone(ddi, ddd, numero);
+                Endereco endereco = new Endereco(logradouro, numeroEndereco, complemento, cep, cidade, estado);
+                Contato contato = new Contato(id, nome, telefone, email, endereco);
+            contato.setId(id); 
+            contatos.add(contato);
         }
-        
-        if(contatoEncontrado){
-            try(BufferedWriter buffWrite = new BufferedWriter(new FileWriter(nomeArquivo))) {
-                for(String linha : auxiliar){
-                    buffWrite.write(linha);
-                    buffWrite.newLine();
-                }
-            }catch(IOException e){
-                e.printStackTrace();
-            }
-        }       
+    } catch (SQLException erro) {
+        throw new Exception("SQL Erro: " + erro.getMessage());
+    }
+    return contatos;
 }
-@Override
-public void alterar(Contato contatoAntigo, Contato contatoNovo) throws Exception {
-    // Ler todos os contatos do arquivo
-    ArrayList<Contato> contatos = listar();
-    
-    boolean contatoEncontrado = false;
-    
-    // Encontrar o contato a ser alterado na lista
-    for (int i = 0; i < contatos.size(); i++) {
-        Contato contato = contatos.get(i);
-        if (contato.getNomeCompleto().equalsIgnoreCase(contatoAntigo.getNomeCompleto())) {
-            // Atualizar os dados do contato
-            contatos.set(i, contatoNovo);
-            contatoEncontrado = true;
-            break;
-        }
-    }
-    
-    if (!contatoEncontrado) {
-        throw new Exception("Contato não encontrado.");
-    }
-
-    // Escrever os contatos atualizados de volta no arquivo
-    try (BufferedWriter bw = new BufferedWriter(new FileWriter(nomeArquivo))) {
-        for (Contato contato : contatos) {
-            Telefone telefone = contato.getTelefone();
-            Endereco endereco = contato.getEndereco();
-            String linha = String.join(";",
-                    contato.getNomeCompleto(),
-                    Integer.toString(telefone.getDdi()),
-                    Integer.toString(telefone.getDdd()),
-                    Integer.toString(telefone.getNumero()),
-                    contato.getEmail(),
-                    endereco.getLogradouro(),
-                    Integer.toString(endereco.getNumero()),
-                    endereco.getComplemento(),
-                    Integer.toString(endereco.getCep()),
-                    endereco.getCidade(),
-                    endereco.getEstado());
-            bw.write(linha);
-            bw.newLine();
-        }
-    } catch (IOException e) {
-        throw new Exception("Erro ao salvar o contato no arquivo.", e);
-    }
-}
-@Override
-    public ArrayList<Contato> consultar(String termo) throws Exception {
-        ArrayList<Contato> contatos = listar();
-        ArrayList<Contato> resultados = new ArrayList<>();
-
-        for (Contato contato : contatos) {
-            if (contato.getNomeCompleto().toLowerCase().contains(termo.toLowerCase())) {
-                resultados.add(contato);
-            }
-        }
-
-        return resultados;
-    }
 }

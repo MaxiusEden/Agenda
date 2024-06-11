@@ -3,9 +3,20 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
 package modelos;
-
+/**
+ *
+ * @author filip
+ */
 public class Contato {
+    private int id = 0;
 
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
     private String nomeCompleto = "";
     private Telefone telefone = null;
     private String email = "";
@@ -13,7 +24,8 @@ public class Contato {
 
     public Contato() {
     }
-    public Contato(String nomeCompleto, Telefone telefone, String email, Endereco endereco) {
+    public Contato(int id, String nomeCompleto, Telefone telefone, String email, Endereco endereco) {
+        this.id = id;
         this.nomeCompleto = nomeCompleto;
         this.telefone = telefone;
         this.email = email;
@@ -46,7 +58,8 @@ public class Contato {
 
     @Override
     public String toString() {
-        return "Contato{" + "nomeCompleto=" + nomeCompleto + ", telefone=" + telefone + ", email=" + email + ", endereco=" + endereco + '}';
+        return "Contato{" + "nomeCompleto=" + nomeCompleto + ", telefone=" + telefone + ", email=" 
+                + email + ", endereco=" + endereco + '}';
     }
 }
     
